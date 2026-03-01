@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>घर खर्चा – Smart Home Budget</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: rgba(255,255,255,0.06);
+    --primary: #f97316;
+    --primary-glow: rgba(249,115,22,0.2);
+    --green: #22c55e;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --text3: #475569;
+    --font: 'Baloo 2', sans-serif;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; }
+  
+  /* ─── AUTH SCREEN ─── */
+  #auth-screen {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 20% 50%, rgba(249,115,22,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 50%, rgba(59,130,246,0.08) 0%, transparent 60%),
+                var(--bg);
+  }
+  .auth-card {
+    width: 420px; max-width: 95vw;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 48px 40px;
+    box-shadow: 0 0 80px rgba(249,115,22,0.08);
+  }
+  .auth-logo { text-align: center; margin-bottom: 32px; }
+  .auth-logo .emoji { font-size: 48px; display: block; margin-bottom: 8px; }
+  .auth-logo h1 { font-size: 28px; font-weight: 800; color: var(--primary); }
+  .auth-logo p { color: var(--text2); font-size: 14px; margin-top: 4px; }
+  .tab-switch { display: flex; gap: 4px; background: var(--surface2); border-radius: 12px; padding: 4px; margin-bottom: 28px; }
+  .tab-btn { flex: 1; padding: 10px; border: none; border-radius: 9px; background: transparent; color: var(--text2); font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .tab-btn.active { background: var(--primary); color: white; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-group input { width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: var(--font); font-size: 15px; outline: none; transition: border 0.2s; }
+  .form-group input:focus { border-color: var(--primary); }
+  .btn-primary { width: 100%; padding: 14px; background: var(--primary); border: none; border-radius: 12px; color: white; font-family: var(--font); font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+  .btn-primary:hover { background: #ea6c0e; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(249,115,22,0.3); }
+  .auth-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #fca5a5; margin-bottom: 12px; display: none; }
+  
+  /* ─── APP LAYOUT ─── */
+  #app { display: none; min-height: 100vh; }
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    display: flex; flex-direction: column;
+    z-index: 100;
+  }
+  .sidebar-logo { padding: 0 24px 24px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .sidebar-logo span { font-size: 22px; font-weight: 800; color: var(--primary); }
+  .sidebar-logo small { display: block; color: var(--text2); font-size: 12px; }
+  .user-chip { margin: 0 16px 16px; padding: 10px 14px; background: var(--surface2); border-radius: 12px; display: flex; align-items: center; gap: 10px; }
+  .user-avatar { width: 32px; height: 32px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+  .user-info span { display: block; font-size: 13px; font-weight: 600; }
+  .user-info small { color: var(--text2); font-size: 11px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 24px; cursor: pointer; transition: all 0.2s; color: var(--text2); font-size: 14px; font-weight: 600; border-left: 3px solid transparent; }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--primary); border-left-color: var(--primary); background: var(--primary-glow); }
+  .nav-item .nav-icon { font-size: 18px; }
+  .sidebar-footer { margin-top: auto; padding: 16px; }
+  .btn-logout { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--border); border-radius: 10px; color: var(--text3); font-family: var(--font); font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  .main { margin-left: 240px; padding: 32px; min-height: 100vh; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .page-title { font-size: 24px; font-weight: 800; }
+  .month-picker { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; }
+  .month-picker select { background: transparent; border: none; color: var(--text); font-family: var(--font); font-size: 14px; font-weight: 600; outline: none; cursor: pointer; }
+
+  /* ─── STATS CARDS ─── */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; position: relative; overflow: hidden; }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .stat-card.income::before { background: var(--green); }
+  .stat-card.expense::before { background: var(--red); }
+  .stat-card.balance::before { background: var(--primary); }
+  .stat-label { font-size: 12px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 800; }
+  .stat-value.income { color: var(--green); }
+  .stat-value.expense { color: var(--red); }
+  .stat-value.balance-pos { color: var(--primary); }
+  .stat-value.balance-neg { color: var(--red); }
+  .stat-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+  /* ─── CHARTS ─── */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+  .chart-title { font-size: 15px; font-weight: 700; margin-bottom: 20px; color: var(--text2); }
+  .chart-wrap { position: relative; height: 220px; }
+  .no-data { text-align: center; color: var(--text3); padding: 40px 0; font-size: 13px; }
+
+  /* ─── CATEGORY LIST ─── */
+  .cat-list { display: flex; flex-direction: column; gap: 8px; }
+  .cat-item { display: flex; align-items: center; gap: 12px; }
+  .cat-icon-wrap { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .cat-info { flex: 1; }
+  .cat-name { font-size: 13px; font-weight: 600; }
+  .cat-bar-wrap { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .cat-bar { height: 100%; border-radius: 3px; transition: width 0.5s; }
+  .cat-amount { font-size: 13px; font-weight: 700; min-width: 80px; text-align: right; }
+
+  /* ─── TRANSACTION LIST ─── */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-title { font-size: 18px; font-weight: 700; }
+  .btn-add { display: flex; align-items: center; gap: 8px; padding: 10px 18px; background: var(--primary); border: none; border-radius: 10px; color: white; font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-add:hover { background: #ea6c0e; }
+  .transactions-table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .table-row { display: grid; grid-template-columns: 40px 1fr 120px 100px 80px; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  .table-row:last-child { border-bottom: none; }
+  .table-row:hover { background: var(--surface2); }
+  .table-row.header { background: var(--surface2); color: var(--text3); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .tx-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .tx-desc { font-size: 14px; font-weight: 600; }
+  .tx-cat { font-size: 12px; color: var(--text2); }
+  .tx-date { font-size: 13px; color: var(--text2); }
+  .tx-amount { font-size: 15px; font-weight: 700; }
+  .tx-amount.neg { color: var(--red); }
+  .tx-amount.pos { color: var(--green); }
+  .tx-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .btn-icon { width: 28px; height: 28px; border: none; border-radius: 7px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; background: var(--surface2); color: var(--text2); }
+  .btn-icon:hover.edit { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .btn-icon:hover.del { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  /* ─── MODAL ─── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px; width: 460px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 24px; }
+  .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-grid .full { grid-column: 1 / -1; }
+  .btn-cancel { padding: 12px 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--text2); font-family: var(--font); font-size: 14px; cursor: pointer; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .btn-save { padding: 12px 28px; background: var(--primary); border: none; border-radius: 10px; color: white; font-family: var(--font); font-size: 14px; font-weight: 700; cursor: pointer; }
+  .form-group select { width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: var(--font); font-size: 15px; outline: none; }
+
+  /* ─── INCOME PAGE ─── */
+  .income-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .income-row { display: grid; grid-template-columns: 1fr 140px 80px; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .income-row:last-child { border-bottom: none; }
+  .income-row.header { background: var(--surface2); color: var(--text3); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 40px; color: var(--text3); }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all 0.3s; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--green); color: white; }
+  .toast.error { background: var(--red); color: white; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .main { margin-left: 0; padding: 16px; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Page visibility */
+  .page { display: none; }
+  .page.active { display: block; }
+  
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  .months-hi { font-size: 13px; color: var(--text3); }
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="emoji">🏠</span>
+      <h1>घर खर्चा</h1>
+      <p>Smart Home Budget Tracker</p>
+    </div>
+    <div class="tab-switch">
+      <button class="tab-btn active" onclick="switchTab('login')">Login करें</button>
+      <button class="tab-btn" onclick="switchTab('register')">Register करें</button>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+    
+    <div id="login-form">
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="aapka@email.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Password daalen"></div>
+      <button class="btn-primary" onclick="doLogin()">Login करें →</button>
+    </div>
+    
+    <div id="register-form" style="display:none">
+      <div class="form-group"><label>Aapka Naam</label><input type="text" id="reg-name" placeholder="Jaise: Ramesh Kumar"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="aapka@email.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="reg-pass" placeholder="Kam se kam 6 characters"></div>
+      <button class="btn-primary" onclick="doRegister()">Account Banayein →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <span>🏠 घर खर्चा</span>
+      <small>Smart Budget Tracker</small>
+    </div>
+    <div class="user-chip">
+      <div class="user-avatar" id="user-avatar">R</div>
+      <div class="user-info">
+        <span id="user-name-display">User</span>
+        <small id="user-email-display">email</small>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span> Dashboard</div>
+      <div class="nav-item" onclick="showPage('income')"><span class="nav-icon">💰</span> Income/Salary</div>
+      <div class="nav-item" onclick="showPage('expenses')"><span class="nav-icon">🧾</span> Kharche</div>
+      <div class="nav-item" onclick="showPage('categories')"><span class="nav-icon">🏷️</span> Categories</div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="doLogout()">🚪 Logout</button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <!-- Month Picker (top) -->
+    <div class="page-header">
+      <div class="page-title" id="page-title-text">Dashboard</div>
+      <div class="month-picker">
+        📅
+        <select id="month-select" onchange="onMonthChange()">
+          <option value="1">January</option><option value="2">February</option>
+          <option value="3">March</option><option value="4">April</option>
+          <option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option>
+          <option value="9">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+        <select id="year-select" onchange="onMonthChange()"></select>
+      </div>
+    </div>
+
+    <!-- DASHBOARD PAGE -->
+    <div id="page-dashboard" class="page active">
+      <div class="stats-grid">
+        <div class="stat-card income">
+          <div class="stat-label">💰 Total Income</div>
+          <div class="stat-value income" id="stat-income">₹0</div>
+          <div class="stat-sub">Is mahine ki amdani</div>
+        </div>
+        <div class="stat-card expense">
+          <div class="stat-label">🧾 Total Kharcha</div>
+          <div class="stat-value expense" id="stat-expense">₹0</div>
+          <div class="stat-sub">Is mahine ka kharcha</div>
+        </div>
+        <div class="stat-card balance">
+          <div class="stat-label">💎 Bacha Hua</div>
+          <div class="stat-value balance-pos" id="stat-balance">₹0</div>
+          <div class="stat-sub" id="stat-balance-sub">Income - Kharcha</div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">📈 6 Mahine ka Trend</div>
+          <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🥧 Category-wise Kharcha</div>
+          <div class="chart-wrap" style="height:200px"><canvas id="pie-chart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">📊 Category Breakdown</div>
+        <div id="cat-breakdown" class="cat-list"></div>
+      </div>
+    </div>
+
+    <!-- INCOME PAGE -->
+    <div id="page-income" class="page">
+      <div class="section-header">
+        <div class="section-title">💰 Income / Salary</div>
+        <button class="btn-add" onclick="openIncomeModal()">+ Income Add करें</button>
+      </div>
+      <div id="income-list-wrap"></div>
+    </div>
+
+    <!-- EXPENSES PAGE -->
+    <div id="page-expenses" class="page">
+      <div class="section-header">
+        <div class="section-title">🧾 Ghar Ke Kharche</div>
+        <button class="btn-add" onclick="openExpenseModal()">+ Kharcha Add करें</button>
+      </div>
+      <div id="expense-list-wrap"></div>
+    </div>
+
+    <!-- CATEGORIES PAGE -->
+    <div id="page-categories" class="page">
+      <div class="section-header">
+        <div class="section-title">🏷️ Categories</div>
+        <button class="btn-add" onclick="openCatModal()">+ Category Banayein</button>
+      </div>
+      <div id="cat-list-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- INCOME MODAL -->
+<div class="modal-overlay" id="income-modal">
+  <div class="modal">
+    <div class="modal-title">💰 Income Add Karein</div>
+    <input type="hidden" id="income-edit-id">
+    <div class="form-group">
+      <label>Amount (₹)</label>
+      <input type="number" id="income-amount" placeholder="Jaise: 25000">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <input type="text" id="income-desc" placeholder="Jaise: October Salary, Freelance, etc.">
+    </div>
+    <div class="modal-grid">
+      <div class="form-group">
+        <label>Mahina</label>
+        <select id="income-month"></select>
+      </div>
+      <div class="form-group">
+        <label>Saal</label>
+        <select id="income-year"></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('income-modal')">Cancel</button>
+      <button class="btn-save" onclick="saveIncome()">Save Karein</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPENSE MODAL -->
+<div class="modal-overlay" id="expense-modal">
+  <div class="modal">
+    <div class="modal-title" id="expense-modal-title">🧾 Kharcha Add Karein</div>
+    <input type="hidden" id="expense-edit-id">
+    <div class="modal-grid">
+      <div class="form-group full">
+        <label>Amount (₹)</label>
+        <input type="number" id="expense-amount" placeholder="Jaise: 5000">
+      </div>
+      <div class="form-group full">
+        <label>Description</label>
+        <input type="text" id="expense-desc" placeholder="Kya kharch kiya?">
+      </div>
+      <div class="form-group full">
+        <label>Category</label>
+        <select id="expense-cat"></select>
+      </div>
+      <div class="form-group full">
+        <label>Date</label>
+        <input type="date" id="expense-date">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('expense-modal')">Cancel</button>
+      <button class="btn-save" onclick="saveExpense()">Save Karein</button>
+    </div>
+  </div>
+</div>
+
+<!-- CATEGORY MODAL -->
+<div class="modal-overlay" id="cat-modal">
+  <div class="modal">
+    <div class="modal-title">🏷️ Nayi Category</div>
+    <div class="form-group">
+      <label>Category Ka Naam</label>
+      <input type="text" id="cat-name" placeholder="Jaise: Petrol, Grooming, etc.">
+    </div>
+    <div class="modal-grid">
+      <div class="form-group">
+        <label>Icon (Emoji)</label>
+        <input type="text" id="cat-icon" placeholder="🎯" maxlength="2">
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <input type="color" id="cat-color" value="#f97316" style="height:46px; padding:4px;">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('cat-modal')">Cancel</button>
+      <button class="btn-save" onclick="saveCategory()">Save Karein</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_HI = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let token = localStorage.getItem('gk_token');
+let currentUser = JSON.parse(localStorage.getItem('gk_user') || 'null');
+let currentMonth = new Date().getMonth() + 1;
+let currentYear = new Date().getFullYear();
+let categories = [];
+let trendChartInstance = null;
+let pieChartInstance = null;
+
+// ─── INIT ───
+window.onload = () => {
+  initMonthPickers();
+  if (token && currentUser) {
+    showApp();
+  }
+};
+
+function initMonthPickers() {
+  const ms = document.getElementById('month-select');
+  const ys = document.getElementById('year-select');
+  ms.value = currentMonth;
+  const yr = new Date().getFullYear();
+  for (let y = yr; y >= yr - 3; y--) {
+    ys.innerHTML += `<option value="${y}">${y}</option>`;
+  }
+  ys.value = currentYear;
+
+  // Income modal pickers
+  const im = document.getElementById('income-month');
+  const iy = document.getElementById('income-year');
+  MONTHS.forEach((m, i) => im.innerHTML += `<option value="${i+1}">${m}</option>`);
+  im.value = currentMonth;
+  for (let y = yr; y >= yr - 3; y--) iy.innerHTML += `<option value="${y}">${y}</option>`;
+  iy.value = currentYear;
+}
+
+function onMonthChange() {
+  currentMonth = parseInt(document.getElementById('month-select').value);
+  currentYear = parseInt(document.getElementById('year-select').value);
+  loadCurrentPage();
+}
+
+// ─── AUTH ───
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0) === (tab==='login')));
+  document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-pass').value;
+  if (!email || !password) return showAuthError('Email aur password daalen');
+  try {
+    const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password}) });
+    const data = await res.json();
+    if (!res.ok) return showAuthError(data.error || 'Login failed');
+    saveAuth(data);
+  } catch { showAuthError('Network error'); }
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-pass').value;
+  if (!name || !email || !password) return showAuthError('Sabhi fields bharen');
+  if (password.length < 6) return showAuthError('Password kam se kam 6 characters ka ho');
+  try {
+    const res = await fetch('/api/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, email, password}) });
+    const data = await res.json();
+    if (!res.ok) return showAuthError(data.error || 'Registration failed');
+    saveAuth(data);
+  } catch { showAuthError('Network error'); }
+}
+
+function saveAuth(data) {
+  token = data.token;
+  currentUser = { id: data.user_id, name: data.name, email: data.email };
+  localStorage.setItem('gk_token', token);
+  localStorage.setItem('gk_user', JSON.stringify(currentUser));
+  showApp();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function doLogout() {
+  localStorage.removeItem('gk_token');
+  localStorage.removeItem('gk_user');
+  token = null; currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('user-name-display').textContent = currentUser.name;
+  document.getElementById('user-email-display').textContent = currentUser.email;
+  document.getElementById('user-avatar').textContent = currentUser.name[0].toUpperCase();
+  loadCategories().then(() => loadCurrentPage());
+}
+
+// ─── NAVIGATION ───
+let currentPage = 'dashboard';
+function showPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const titles = {dashboard:'📊 Dashboard', income:'💰 Income / Salary', expenses:'🧾 Ghar Ke Kharche', categories:'🏷️ Categories'};
+  document.getElementById('page-title-text').textContent = titles[page];
+  loadCurrentPage();
+}
+
+function loadCurrentPage() {
+  if (currentPage === 'dashboard') loadDashboard();
+  else if (currentPage === 'income') loadIncome();
+  else if (currentPage === 'expenses') loadExpenses();
+  else if (currentPage === 'categories') renderCategoriesPage();
+}
+
+// ─── API ───
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  if (res.status === 401) { doLogout(); return null; }
+  return res.json();
+}
+
+// ─── DASHBOARD ───
+async function loadDashboard() {
+  const data = await api(`/api/summary?month=${currentMonth}&year=${currentYear}`);
+  if (!data) return;
+  document.getElementById('stat-income').textContent = fmt(data.total_income);
+  document.getElementById('stat-expense').textContent = fmt(data.total_expenses);
+  const bal = data.balance;
+  const balEl = document.getElementById('stat-balance');
+  balEl.textContent = fmt(Math.abs(bal));
+  balEl.className = 'stat-value ' + (bal >= 0 ? 'balance-pos' : 'balance-neg');
+  document.getElementById('stat-balance-sub').textContent = bal >= 0 ? '✅ Bacha hua hai' : '⚠️ Zyada kharcha ho gaya';
+
+  renderTrendChart(data.monthly_trend || []);
+  renderPieChart(data.category_breakdown || []);
+  renderCategoryBreakdown(data.category_breakdown || []);
+}
+
+function fmt(n) { return '₹' + (n||0).toLocaleString('en-IN', {maximumFractionDigits:0}); }
+
+function renderTrendChart(trend) {
+  if (trendChartInstance) trendChartInstance.destroy();
+  const ctx = document.getElementById('trend-chart').getContext('2d');
+  const labels = trend.map(t => MONTHS_HI[t.month-1] + "'" + String(t.year).slice(-2));
+  trendChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Income', data: trend.map(t => t.income), backgroundColor: 'rgba(34,197,94,0.7)', borderRadius: 6 },
+        { label: 'Kharcha', data: trend.map(t => t.expense), backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#94a3b8', font: { family: 'Baloo 2' } } } },
+      scales: {
+        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.03)' } },
+        y: { ticks: { color: '#64748b', callback: v => '₹'+v.toLocaleString('en-IN') }, grid: { color: 'rgba(255,255,255,0.03)' } }
+      }
+    }
+  });
+}
+
+function renderPieChart(breakdown) {
+  if (pieChartInstance) pieChartInstance.destroy();
+  if (!breakdown.length) return;
+  const ctx = document.getElementById('pie-chart').getContext('2d');
+  pieChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: breakdown.map(b => b.category_icon + ' ' + b.category_name),
+      datasets: [{ data: breakdown.map(b => b.total), backgroundColor: breakdown.map(b => b.category_color), borderWidth: 2, borderColor: '#12121a' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { family: 'Baloo 2', size: 11 }, boxWidth: 12 } } },
+      cutout: '65%'
+    }
+  });
+}
+
+function renderCategoryBreakdown(breakdown) {
+  const el = document.getElementById('cat-breakdown');
+  if (!breakdown.length) { el.innerHTML = '<div class="no-data">Is mahine koi kharcha nahi hai</div>'; return; }
+  el.innerHTML = breakdown.map(b => `
+    <div class="cat-item" style="margin-bottom:12px">
+      <div class="cat-icon-wrap" style="background:${b.category_color}22">${b.category_icon}</div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:600">${b.category_name}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--red)">${fmt(b.total)}</span>
+        </div>
+        <div class="cat-bar-wrap"><div class="cat-bar" style="width:${b.percentage}%;background:${b.category_color}"></div></div>
+      </div>
+      <span style="font-size:12px;color:var(--text3);margin-left:10px;min-width:40px">${b.percentage.toFixed(1)}%</span>
+    </div>
+  `).join('');
+}
+
+// ─── INCOME ───
+async function loadIncome() {
+  const data = await api(`/api/income?month=${currentMonth}&year=${currentYear}`);
+  if (!data) return;
+  const el = document.getElementById('income-list-wrap');
+  if (!data.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">💸</div><p>Is mahine koi income add nahi ki<br>Upar se "+ Income Add Karein" click karein</p></div>'; return; }
+  const total = data.reduce((s,i) => s + i.amount, 0);
+  el.innerHTML = `
+    <div style="margin-bottom:12px;padding:16px 20px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:12px;display:flex;justify-content:space-between;align-items:center">
+      <span style="color:var(--text2);font-size:13px">Is mahine ki total amdani</span>
+      <span style="color:var(--green);font-size:20px;font-weight:800">${fmt(total)}</span>
+    </div>
+    <div class="income-list">
+      <div class="income-row header"><span>Description</span><span>Date</span><span></span></div>
+      ${data.map(inc => `
+        <div class="income-row">
+          <div>
+            <div style="font-weight:600;font-size:14px">💰 ${inc.description || 'Income'}</div>
+            <div style="color:var(--green);font-size:16px;font-weight:800">${fmt(inc.amount)}</div>
+          </div>
+          <div style="color:var(--text2);font-size:13px">${MONTHS[inc.month-1]} ${inc.year}</div>
+          <div style="display:flex;justify-content:flex-end">
+            <button class="btn-icon del" onclick="deleteIncome(${inc.id})">🗑️</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function openIncomeModal() {
+  document.getElementById('income-edit-id').value = '';
+  document.getElementById('income-amount').value = '';
+  document.getElementById('income-desc').value = '';
+  document.getElementById('income-month').value = currentMonth;
+  document.getElementById('income-year').value = currentYear;
+  document.getElementById('income-modal').classList.add('open');
+}
+
+async function saveIncome() {
+  const amount = parseFloat(document.getElementById('income-amount').value);
+  const description = document.getElementById('income-desc').value;
+  const month = parseInt(document.getElementById('income-month').value);
+  const year = parseInt(document.getElementById('income-year').value);
+  if (!amount || amount <= 0) return showToast('Sahi amount daalen', 'error');
+  const res = await api('/api/income', 'POST', { amount, description, month, year });
+  if (res && res.id) { closeModal('income-modal'); showToast('Income add ho gayi!', 'success'); loadIncome(); }
+  else showToast('Kuch galat ho gaya', 'error');
+}
+
+async function deleteIncome(id) {
+  if (!confirm('Kya aap is income ko delete karna chahte hain?')) return;
+  await api(`/api/income/${id}`, 'DELETE');
+  showToast('Delete ho gaya', 'success');
+  loadIncome();
+}
+
+// ─── EXPENSES ───
+async function loadExpenses() {
+  const data = await api(`/api/expenses?month=${currentMonth}&year=${currentYear}`);
+  if (!data) return;
+  const el = document.getElementById('expense-list-wrap');
+  if (!data.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🧾</div><p>Is mahine koi kharcha add nahi kiya<br>Upar se "+ Kharcha Add Karein" click karein</p></div>'; return; }
+  const total = data.reduce((s,e) => s + e.amount, 0);
+  el.innerHTML = `
+    <div style="margin-bottom:12px;padding:16px 20px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:12px;display:flex;justify-content:space-between;align-items:center">
+      <span style="color:var(--text2);font-size:13px">Is mahine ka total kharcha</span>
+      <span style="color:var(--red);font-size:20px;font-weight:800">${fmt(total)}</span>
+    </div>
+    <div class="transactions-table">
+      <div class="table-row header"><span></span><span>Kharcha</span><span>Category</span><span>Date</span><span>Amount</span></div>
+      ${data.map(exp => `
+        <div class="table-row">
+          <div class="tx-icon" style="background:${exp.category_color||'#334155'}22">${exp.category_icon||'📦'}</div>
+          <div>
+            <div class="tx-desc">${exp.description || exp.category_name}</div>
+            <div class="tx-cat">${exp.category_name}</div>
+          </div>
+          <div>
+            <span class="badge" style="background:${exp.category_color||'#334155'}22;color:${exp.category_color||'#94a3b8'}">${exp.category_icon} ${exp.category_name}</span>
+          </div>
+          <div class="tx-date">${exp.date}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span class="tx-amount neg">${fmt(exp.amount)}</span>
+            <div class="tx-actions">
+              <button class="btn-icon edit" onclick="openEditExpense(${JSON.stringify(exp).replace(/"/g,'&quot;')})">✏️</button>
+              <button class="btn-icon del" onclick="deleteExpense(${exp.id})">🗑️</button>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+async function loadCategories() {
+  categories = await api('/api/categories') || [];
+  populateCategorySelect();
+}
+
+function populateCategorySelect() {
+  const sel = document.getElementById('expense-cat');
+  sel.innerHTML = categories.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+}
+
+function openExpenseModal(editData = null) {
+  document.getElementById('expense-modal-title').textContent = editData ? '✏️ Kharcha Edit Karein' : '🧾 Kharcha Add Karein';
+  document.getElementById('expense-edit-id').value = editData ? editData.id : '';
+  document.getElementById('expense-amount').value = editData ? editData.amount : '';
+  document.getElementById('expense-desc').value = editData ? editData.description : '';
+  document.getElementById('expense-date').value = editData ? editData.date : new Date().toISOString().slice(0,10);
+  if (editData && editData.category_id) document.getElementById('expense-cat').value = editData.category_id;
+  document.getElementById('expense-modal').classList.add('open');
+}
+
+function openEditExpense(exp) { openExpenseModal(exp); }
+
+async function saveExpense() {
+  const id = document.getElementById('expense-edit-id').value;
+  const amount = parseFloat(document.getElementById('expense-amount').value);
+  const description = document.getElementById('expense-desc').value;
+  const category_id = parseInt(document.getElementById('expense-cat').value) || null;
+  const date = document.getElementById('expense-date').value;
+  if (!amount || amount <= 0) return showToast('Sahi amount daalen', 'error');
+  if (!date) return showToast('Date select karein', 'error');
+
+  let res;
+  if (id) res = await api(`/api/expenses/${id}`, 'PUT', { amount, description, category_id, date });
+  else res = await api('/api/expenses', 'POST', { amount, description, category_id, date });
+  
+  if (res) { closeModal('expense-modal'); showToast(id ? 'Update ho gaya!' : 'Kharcha add ho gaya!', 'success'); loadExpenses(); }
+  else showToast('Kuch galat ho gaya', 'error');
+}
+
+async function deleteExpense(id) {
+  if (!confirm('Kya aap ye kharcha delete karna chahte hain?')) return;
+  await api(`/api/expenses/${id}`, 'DELETE');
+  showToast('Delete ho gaya', 'success');
+  loadExpenses();
+}
+
+// ─── CATEGORIES PAGE ───
+function renderCategoriesPage() {
+  const el = document.getElementById('cat-list-wrap');
+  if (!categories.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏷️</div><p>Koi category nahi hai</p></div>'; return; }
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+    ${categories.map(c => `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;display:flex;align-items:center;gap:14px">
+        <div style="width:44px;height:44px;border-radius:12px;background:${c.color}22;display:flex;align-items:center;justify-content:center;font-size:22px">${c.icon}</div>
+        <div>
+          <div style="font-weight:700;font-size:15px">${c.name}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Category</div>
+        </div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+async function openCatModal() {
+  document.getElementById('cat-name').value = '';
+  document.getElementById('cat-icon').value = '📦';
+  document.getElementById('cat-color').value = '#f97316';
+  document.getElementById('cat-modal').classList.add('open');
+}
+
+async function saveCategory() {
+  const name = document.getElementById('cat-name').value.trim();
+  const icon = document.getElementById('cat-icon').value || '📦';
+  const color = document.getElementById('cat-color').value;
+  if (!name) return showToast('Category ka naam daalen', 'error');
+  const res = await api('/api/categories', 'POST', { name, icon, color });
+  if (res && res.id) {
+    await loadCategories();
+    closeModal('cat-modal');
+    showToast('Category ban gayi!', 'success');
+    renderCategoriesPage();
+  } else showToast('Kuch galat ho gaya', 'error');
+}
+
+// ─── UTILS ───
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
